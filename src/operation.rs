@@ -44,8 +44,15 @@ impl Variable {
         COUNTER.fetch_add(1, atomic::Ordering::Relaxed)
     }
 
-    pub fn new(id: usize, value: Scalar) -> Self {
+    pub fn with_id(id: usize, value: Scalar) -> Self {
         Self { id, value }
+    }
+
+    pub fn new(value: Scalar) -> Self {
+        Self {
+            id: Self::unique_id(),
+            value,
+        }
     }
 }
 
