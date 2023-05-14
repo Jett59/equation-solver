@@ -127,8 +127,36 @@ impl Value {
         }
     }
 
+    pub fn is_sum(&self) -> bool {
+        matches!(self, Self::Sum(_))
+    }
+    pub fn is_multiplication(&self) -> bool {
+        matches!(self, Self::Multiplication(_))
+    }
+    pub fn is_power(&self) -> bool {
+        matches!(self, Self::Power(_, _))
+    }
+    pub fn is_log(&self) -> bool {
+        matches!(self, Self::Log(_, _))
+    }
+    pub fn is_scalar(&self) -> bool {
+        matches!(self, Self::Scalar(_))
+    }
+    pub fn is_variable(&self) -> bool {
+        matches!(self, Self::Variable(_))
+    }
+    pub fn is_e(&self) -> bool {
+        matches!(self, Self::E)
+    }
+    pub fn is_pi(&self) -> bool {
+        matches!(self, Self::Pi)
+    }
+
     pub fn pow(self, exponent: Value) -> Self {
         Self::Power(Box::new(self), Box::new(exponent))
+    }
+    pub fn log(self, base: Value) -> Self {
+        Self::Log(Box::new(base), Box::new(self))
     }
 }
 
