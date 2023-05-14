@@ -1,6 +1,6 @@
 use std::{
     cell::Cell,
-    ops::Deref,
+    ops::{Add, Deref, Div, Mul, Neg, Sub},
     rc::Rc,
     sync::atomic::{self, AtomicUsize},
 };
@@ -23,6 +23,12 @@ impl Deref for Scalar {
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+impl From<f64> for Scalar {
+    fn from(value: f64) -> Self {
+        Self(value)
     }
 }
 
@@ -55,6 +61,12 @@ pub enum Value {
     Pi,
 }
 
+impl From<Scalar> for Value {
+    fn from(scalar: Scalar) -> Self {
+        Self::Scalar(scalar)
+    }
+}
+
 impl Value {
     pub fn evaluate(&self) -> f64 {
         match self {
@@ -67,5 +79,96 @@ impl Value {
             Value::E => std::f64::consts::E,
             Value::Pi => std::f64::consts::PI,
         }
+    }
+
+    pub fn depends_on(&self, variable_id: usize) -> bool {
+        match self {
+            Value::Sum(values) => values.iter().any(|value| value.depends_on(variable_id)),
+            Value::Multiplication(values) => {
+                values.iter().any(|value| value.depends_on(variable_id))
+            }
+            Value::Power(base, exponent) => {
+                base.depends_on(variable_id) || exponent.depends_on(variable_id)
+            }
+            Value::Log(base, argument) => {
+                base.depends_on(variable_id) || argument.depends_on(variable_id)
+            }
+            Value::Scalar(_) => false,
+            Value::Variable(cell) => cell.get().id == variable_id,
+            Value::E => false,
+            Value::Pi => false,
+        }
+    }
+
+    pub fn pow(self, exponent: Value) -> Self {
+        Self::Power(Box::new(self), Box::new(exponent))
+    }
+}
+
+impl Add<Value> for Value {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        match self {
+            Self::Sum(mut values) => {
+                if let Self::Sum(rhs_values) = rhs {
+                    values.extend(rhs_values);
+                    Self::Sum(values)
+                } else {
+                    values.push(rhs);
+                    Self::Sum(values)
+                }
+            }
+            _ => Self::Sum(vec![self, rhs]),
+        }
+    }
+}
+
+impl Neg for Value {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        match self {
+            Self::Multiplication(mut values) => {
+                values.push(Self::Scalar(Scalar(-1.0)));
+                Self::Multiplication(values)
+            }
+            _ => Self::Multiplication(vec![Self::Scalar(Scalar(-1.0)), self]),
+        }
+    }
+}
+
+impl Sub<Value> for Value {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        self + -rhs
+    }
+}
+
+impl Mul<Value> for Value {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        match self {
+            Self::Multiplication(mut values) => {
+                if let Self::Multiplication(rhs_values) = rhs {
+                    values.extend(rhs_values);
+                    Self::Multiplication(values)
+                } else {
+                    values.push(rhs);
+                    Self::Multiplication(values)
+                }
+            }
+            _ => Self::Multiplication(vec![self, rhs]),
+        }
+    }
+}
+
+impl Div<Value> for Value {
+    type Output = Self;
+
+    fn div(self, rhs: Self) -> Self::Output {
+        self * rhs.pow(Scalar(-1.0).into())
     }
 }
