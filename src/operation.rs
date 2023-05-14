@@ -54,6 +54,14 @@ impl Variable {
             value,
         }
     }
+
+    pub fn new_contained(value: Scalar) -> Rc<Cell<Self>> {
+        Rc::new(Cell::new(Self::new(value)))
+    }
+
+    pub fn modify(value: Scalar, variable: Rc<Cell<Self>>) {
+        variable.set(Self::with_id(variable.get().id, value))
+    }
 }
 
 #[derive(PartialEq, Eq, Clone)]
@@ -71,6 +79,18 @@ pub enum Value {
 impl From<Scalar> for Value {
     fn from(scalar: Scalar) -> Self {
         Self::Scalar(scalar)
+    }
+}
+
+impl From<f64> for Value {
+    fn from(scalar: f64) -> Self {
+        Self::Scalar(scalar.into())
+    }
+}
+
+impl From<&Rc<Cell<Variable>>> for Value {
+    fn from(variable: &Rc<Cell<Variable>>) -> Self {
+        Self::Variable(variable.clone())
     }
 }
 
